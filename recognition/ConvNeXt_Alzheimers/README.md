@@ -92,3 +92,85 @@ ChatGPT assisted with the baseline architecture, training/evaluation code, synth
 ![Baseline training and validation losses](figures/baseline_loss.png)
 
 ![Baseline validation patient metrics](figures/baseline_validation.png)
+
+
+<!-- COMP3710-STEP8-CONVNEXT -->
+## Step 8: baseline regularized experiment
+
+This model was trained from random initial weights on the unchanged patient-independent training partition. Preprocessing and validation aggregation match the initial CNN. No pretrained weights, image augmentation, calibration, decision-threshold search or final-test evaluation were performed. The operating threshold remains 0.5.
+
+Configuration: `{'model': 'baseline', 'batch_size': 8, 'accumulation_steps': 4, 'epochs': 30, 'min_epochs': 12, 'patience': 8, 'learning_rate': 0.0003, 'min_learning_rate': 1e-06, 'warmup_epochs': 3, 'weight_decay': 0.05, 'gradient_clip_norm': 5.0, 'seed': 42, 'num_workers': 0, 'device': 'cuda', 'budget_seconds': 10800.0}`.
+
+AdamW uses stronger weight decay on kernels/matrices, excluding biases and one-dimensional normalization/LayerScale parameters. Learning rate has linear warmup followed by cosine decay. Both Step 8 architectures use the same settings, including physical batch size and gradient accumulation. Accumulation does not make BatchNorm behave like a larger physical batch.
+
+Checkpoint selection: validation patient macro-F1, then lower patient log loss, then earliest. These are selected development results, not independent final-test estimates.
+
+Completed epochs: 22; selected epoch: 14; stop reason: patience_after_minimum_epochs.
+
+| Unit | N | Accuracy | Macro-F1 | AUROC | AD recall |
+|---|---:|---:|---:|---:|---:|
+| slice | 4660 | 0.6833 | 0.6724 | 0.7440 | 0.5670 |
+| scan | 233 | 0.7382 | 0.7276 | 0.8069 | 0.6117 |
+| patient | 102 | 0.7843 | 0.7496 | 0.8037 | 0.6364 |
+
+Parameters: 359,922. Hardware: `{'torch_version': '2.7.1+cu126', 'device': 'cuda', 'precision': 'float32; mixed precision and TF32 disabled', 'device_name': 'NVIDIA GeForce RTX 4080 Laptop GPU', 'total_device_memory_gib': 11.99365234375}`.
+Training loop time: 1609.03 seconds. GPU allocator peaks: `{'peak_allocated_gib': 0.11696767807006836, 'peak_reserved_gib': 0.166015625, 'note': 'PyTorch process allocator peaks, not total VRAM used by Windows/other processes.'}`.
+Batch-1 model-only latency: `{'batch_size': 1, 'repeats': 50, 'warmup': 10, 'median_ms_per_slice': 0.8052500197663903, 'p95_ms_per_slice': 0.8132000220939517, 'scope': 'Forward pass only, tensor already on device; not patient/end-to-end latency.'}`. This excludes JPEG loading, preprocessing and patient aggregation.
+
+Limitations: one seed per configuration, repeated use of the development validation set, slice-weighted training (patients with more scans contribute more examples), and no clinical validation. The two Step 8 runs share a recipe, but it is not claimed to be optimal for both architectures. The Step 7-to-Step 8 change is a multi-setting intervention, not an isolated causal test of weight decay. Data remain restricted; private predictions/checkpoints are not committed. Confidence referral and final held-out comparison remain outstanding.
+
+AI disclosure: ChatGPT assisted with implementation, tests and this draft. Record the actual source review and local checks performed; do not claim unperformed checks.
+
+## Step 8: convnext regularized experiment
+
+This model was trained from random initial weights on the unchanged patient-independent training partition. Preprocessing and validation aggregation match the initial CNN. No pretrained weights, image augmentation, calibration, decision-threshold search or final-test evaluation were performed. The operating threshold remains 0.5.
+
+Configuration: `{'model': 'convnext', 'batch_size': 8, 'accumulation_steps': 4, 'epochs': 30, 'min_epochs': 12, 'patience': 8, 'learning_rate': 0.0003, 'min_learning_rate': 1e-06, 'warmup_epochs': 3, 'weight_decay': 0.05, 'gradient_clip_norm': 5.0, 'seed': 42, 'num_workers': 0, 'device': 'cuda', 'budget_seconds': 10800.0}`.
+
+AdamW uses stronger weight decay on kernels/matrices, excluding biases and one-dimensional normalization/LayerScale parameters. Learning rate has linear warmup followed by cosine decay. Both Step 8 architectures use the same settings, including physical batch size and gradient accumulation. Accumulation does not make BatchNorm behave like a larger physical batch.
+
+Checkpoint selection: validation patient macro-F1, then lower patient log loss, then earliest. These are selected development results, not independent final-test estimates.
+
+Completed epochs: 19; selected epoch: 11; stop reason: patience_after_minimum_epochs.
+
+| Unit | N | Accuracy | Macro-F1 | AUROC | AD recall |
+|---|---:|---:|---:|---:|---:|
+| slice | 4660 | 0.6601 | 0.6508 | 0.7205 | 0.5621 |
+| scan | 233 | 0.6953 | 0.6829 | 0.7879 | 0.5631 |
+| patient | 102 | 0.7647 | 0.7167 | 0.8006 | 0.5455 |
+
+Parameters: 27,818,594. Hardware: `{'torch_version': '2.7.1+cu126', 'device': 'cuda', 'precision': 'float32; mixed precision and TF32 disabled', 'device_name': 'NVIDIA GeForce RTX 4080 Laptop GPU', 'total_device_memory_gib': 11.99365234375}`.
+Training loop time: 5262.38 seconds. GPU allocator peaks: `{'peak_allocated_gib': 1.3108057975769043, 'peak_reserved_gib': 1.392578125, 'note': 'PyTorch process allocator peaks, not total VRAM used by Windows/other processes.'}`.
+Batch-1 model-only latency: `{'batch_size': 1, 'repeats': 50, 'warmup': 10, 'median_ms_per_slice': 9.246149999853515, 'p95_ms_per_slice': 14.084000000366359, 'scope': 'Forward pass only, tensor already on device; not patient/end-to-end latency.'}`. This excludes JPEG loading, preprocessing and patient aggregation.
+
+Limitations: one seed per configuration, repeated use of the development validation set, slice-weighted training (patients with more scans contribute more examples), and no clinical validation. The two Step 8 runs share a recipe, but it is not claimed to be optimal for both architectures. The Step 7-to-Step 8 change is a multi-setting intervention, not an isolated causal test of weight decay. Data remain restricted; private predictions/checkpoints are not committed. Confidence referral and final held-out comparison remain outstanding.
+
+AI disclosure: ChatGPT assisted with implementation, tests and this draft. Record the actual source review and local checks performed; do not claim unperformed checks.
+
+## Step 8: validation comparison
+
+The original CNN experiment was retained. One more strongly regularized CNN and one ConvNeXt-Tiny were trained from scratch using a shared, predeclared Step 8 recipe. The data splits, image preprocessing, validation aggregation, selection criterion and 0.5 decision threshold were unchanged. Final-test images were not evaluated.
+
+| Model | Patient accuracy | Macro-F1 | AUROC | AD recall | NC recall | Selected epoch |
+|---|---:|---:|---:|---:|---:|---:|
+| Initial CNN | 78.43% | 0.7292 | 0.8327 | 51.52% | 91.30% | 7 |
+| Regularized CNN | 78.43% | 0.7496 | 0.8037 | 63.64% | 85.51% | 14 |
+| ConvNeXt-Tiny | 76.47% | 0.7167 | 0.8006 | 54.55% | 86.96% | 11 |
+
+Preferred CNN under the predefined validation selection rule: **Regularized CNN**. Retain both CNN runs and report this selection; do not select a weaker baseline to favour ConvNeXt.
+
+The initial-to-regularized CNN comparison changes multiple training settings at once; it does not isolate weight decay. The Step 8 CNN and ConvNeXt have matched optimizer settings and batch configuration, but their architectures and intrinsic regularizers differ. One seed, repeated validation use and a small validation cohort limit generalisation claims. Check stop reasons for any time-limited runs. No result here demonstrates attainment of the final-test accuracy target. Confidence calibration, referral analysis and the final test remain outstanding.
+
+### Implementation and verification
+
+ConvNeXt-Tiny uses stage depths (3,3,9,3), widths (96,192,384,768), a one-channel stem, depthwise 7x7 convolutions, channel LayerNorm, 4x inverted bottlenecks, GELU, LayerScale and stochastic depth. It was implemented in PyTorch without downloading pretrained weights. Reference: Liu et al., *A ConvNet for the 2020s*, CVPR 2022, https://arxiv.org/abs/2201.03545 (assessment reference [7]).
+
+ChatGPT assisted with code, tests and this draft. Record the checks and code review actually performed in the report's Artificial Intelligence Usage Disclosure.
+
+![baseline loss](figures/step8_baseline_loss.png)
+
+![baseline validation](figures/step8_baseline_validation.png)
+
+![convnext loss](figures/step8_convnext_loss.png)
+
+![convnext validation](figures/step8_convnext_validation.png)
