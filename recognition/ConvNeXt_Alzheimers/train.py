@@ -329,4 +329,10 @@ def main() -> int:
 
 
 if __name__ == "__main__":
+    # Step 7's functions/CLI remain available unchanged. Step 8 uses the shared
+    # regularized trainer for both architectures through this assignment entry.
+    if "--step8" in sys.argv:
+        sys.argv.remove("--step8")
+        from train_experiment import main as experiment_main
+        raise SystemExit(experiment_main())
     raise SystemExit(main())
