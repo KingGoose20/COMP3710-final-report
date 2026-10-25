@@ -285,3 +285,30 @@ ChatGPT assisted with code, synthetic tests and this generated draft. Record the
 ![Frozen final-test diagnostic](figures/step10_test_roc.png)
 
 ![Frozen final-test diagnostic](figures/step10_test_reliability.png)
+
+
+<!-- COMP3710-A1-STABILITY -->
+## A1 replication stability check
+
+**Development results only. No final-test inference or threshold fitting was performed.**
+
+The existing seed-42 A1 recipe was repeated at the predeclared seeds 43 and 44. Only the random seed changed. This changes initialization, stochastic layers, augmentation draws and training order, not just initialization. Each run selected its checkpoint by validation patient accuracy, then macro-F1, then lower log loss; the earliest exact tie was retained.
+
+| Seed | Selected epoch / completed | Correct patients | Accuracy | Macro-F1 | AUROC | AD recall | NC recall | Epochs ≥80% |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| 42 | 13 / 21 | 85/102 | 83.33% | 0.8012 | 0.8331 | 66.67% | 91.30% | 1 |
+| 43 | 8 / 16 | 80/102 | 78.43% | 0.7496 | 0.7980 | 63.64% | 85.51% | 0 |
+| 44 | 7 / 15 | 80/102 | 78.43% | 0.7574 | 0.8169 | 69.70% | 82.61% | 0 |
+
+| Cohort of runs | Mean accuracy | Sample SD (percentage points) | Accuracy range |
+|---|---:|---:|---:|
+| All three (includes recipe-selection seed 42) | 80.07% | 2.83 | 78.43%–83.33% |
+| New replications only (43 and 44) | 78.43% | 0.00 | 78.43%–78.43% |
+
+These are repeated measurements on the same patients, not a larger independent test cohort. Selected-checkpoint means and sample standard deviations are descriptive; they do not establish an 80% test result.
+
+Seed 42 remains the provisional candidate. No seed has been automatically substituted, no models have been ensembled, and no calibration or referral rule has been transferred from Version 1. The results require review before another model-development decision or revised evaluation.
+
+Existing A1/A2 histories and private checkpoints were preserved. Resumption repeats only work after the last usable completed-epoch checkpoint. Runtime excludes interrupted partial work and checkpoint/report I/O.
+
+ChatGPT assisted with this additive runner, tests and draft. Document the code review and checks actually performed in the Artificial Intelligence Usage Disclosure; do not claim clinical verification.
