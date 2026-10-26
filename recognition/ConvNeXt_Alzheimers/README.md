@@ -345,3 +345,61 @@ ChatGPT assisted with implementation, tests and this draft. Record the code revi
 
 ![S2_smoothing_validation.png](figures/S2_smoothing_validation.png)
 
+
+
+<!-- COMP3710-A1-SELECTED-CONFIDENCE -->
+## Revised selected-model confidence analysis
+
+Selected development results only. Model/recipe/checkpoint selection repeatedly used these validation patients. Cross-fitting separates temperature/referral fitting from their fold diagnostics, not from prior model selection. Version 1 already exposed the existing test cohort; this step performs no new test evaluation. Referral constraints are empirical project choices, not clinical safety guarantees.
+
+The selected main model is A1 (scratch_augmented, seed 42, epoch 13). S1 and S2 did not meet the declared promotion criteria; they remain documented negative experiments. No pretrained weights, threshold change, new model training or test inference were used here.
+
+Both saved checkpoints were reconstructed and replayed on all finalized validation slices. Per-slice probabilities matched within the declared 2e-5 absolute tolerance; class decisions at slice, scan and patient levels were unchanged. Confidence fitting used the original verified saved patient probabilities. Patient probabilities are means of scan means.
+
+| Model | Patient accuracy | Macro-F1 | AUROC | AD recall |
+|---|---:|---:|---:|---:|
+| Regularized CNN (epoch 14) | 78.43% | 0.7496 | 0.8037 | 63.64% |
+| ConvNeXt A1 (seed 42, epoch 13) | 83.33% | 0.8012 | 0.8331 | 66.67% |
+
+### Probability quality and confident errors
+
+Temperature scaling is applied to clipped patient log-odds after aggregation, with T in [0.5,10]. It does not change the 0.5 class decision. Five folds use exactly the previous subject-hash/stratification rule. Cross-fitting does not undo repeated checkpoint/model selection.
+
+| Model | Raw NLL | Cross-fit NLL | Raw Brier | Cross-fit Brier | Errors at raw confidence ≥90% | Full-fit T |
+|---|---:|---:|---:|---:|---:|---:|
+| Regularized CNN (epoch 14) | 0.5205 | 0.5012 | 0.1715 | 0.1692 | 4 | 1.6134 |
+| ConvNeXt A1 (seed 42, epoch 13) | 0.5141 | 0.5042 | 0.1421 | 0.1519 | 4 | 1.8554 |
+
+### Empirical referral proposal
+
+The unchanged finite grid maximizes coverage subject to accepting at least max(20,ceil(0.25*N)) fitting patients, at most 10% observed accepted error, and at most 10% of all AD patients automatically cleared as NC. If no cutoff qualifies, refer all. These are research constraints, not clinically validated safety limits. Referrals are not correct diagnoses.
+
+| Model | Full-fit cutoff | Full-fit coverage | Full-fit accepted error | Cross-fit coverage | Cross-fit accepted error |
+|---|---:|---:|---:|---:|---:|
+| Regularized CNN (epoch 14) | 0.85 | 26.47% | 3.70% | 26.47% | 14.81% |
+| ConvNeXt A1 (seed 42, epoch 13) | 0.75 | 47.06% | 8.33% | 19.61% | 20.00% |
+
+Full-fit figures are in-sample. Cross-fitted figures remain development diagnostics. Accepted-subset accuracy is not all-patient accuracy and cannot satisfy a test-accuracy target.
+
+### Prediction integration and resources
+
+selected_a1.load_selected_checkpoint supports the selected V2 ConvNeXt and retained CNN formats and verifies checkpoint/manifest/configuration provenance before strict loading. The historical predict.py and final evaluation plan are intentionally unchanged in this stage. They must not be rerun expecting automatic selection of A1.
+
+| Model | Parameters | Replay seconds | Peak allocated GiB | Batch-1 median ms/slice |
+|---|---:|---:|---:|---:|
+| Regularized CNN (epoch 14) | 359,922 | 20.55 | 0.0461 | 1.062 |
+| ConvNeXt A1 (seed 42, epoch 13) | 27,818,594 | 25.15 | 0.2364 | 13.963 |
+
+Replay timing includes validation loading/preprocessing/forward inference, not model loading or report generation. Batch-1 timing uses a preloaded tensor, 10 warmup and 50 measured forwards; it is not patient/end-to-end latency. GPU allocator peaks are not total Windows VRAM.
+
+### Status and assistance
+
+A1 has no revised test result yet. The Version 1 test cohort has already been exposed; any later reuse must be disclosed. The all-patient 0.80 test requirement remains unresolved. The new temperatures/rules are tied to the exact selected checkpoint hashes for later review.
+
+ChatGPT assisted with this integration, tests and report draft. Record the code review, local checks and interpretation personally performed in Artificial Intelligence Usage Disclosure. Temperature-scaling reference: Guo et al., On Calibration of Modern Neural Networks, ICML 2017 (https://arxiv.org/abs/1706.04599).
+
+![Selected-model validation diagnostic](figures/a1_cnn_reliability.png)
+
+![Selected-model validation diagnostic](figures/a1_convnext_reliability.png)
+
+![Selected-model validation diagnostic](figures/a1_risk_coverage.png)
