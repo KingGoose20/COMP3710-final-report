@@ -312,3 +312,36 @@ Seed 42 remains the provisional candidate. No seed has been automatically substi
 Existing A1/A2 histories and private checkpoints were preserved. Resumption repeats only work after the last usable completed-epoch checkpoint. Runtime excludes interrupted partial work and checkpoint/report I/O.
 
 ChatGPT assisted with this additive runner, tests and draft. Document the code review and checks actually performed in the Artificial Intelligence Usage Disclosure; do not claim clinical verification.
+
+
+<!-- COMP3710-S1-S2-SMOOTHING -->
+## Controlled smoothing and learning-rate experiments
+
+**Validation/development evidence only; no new final-test inference.**
+
+A1 seed 42 was preserved. S1 adds uniform training-label smoothing 0.10. S2 additionally lowers the peak learning rate to 0.0001 and reaches the cosine floor at epoch 12, then holds it. All runs use the same patient partitions, scratch ConvNeXt-Tiny, A1 rotations, batch/accumulation, seed 42, 0.5 class cutoff and accuracy/F1/log-loss checkpoint rule. No patient weighting or pretraining.
+
+| Run | Selected epoch | Correct patients | Accuracy | Macro-F1 | AUROC | AD recall | Hard-label log loss |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| A1 | 13 | 85/102 | 83.33% | 0.8012 | 0.8331 | 66.67% | 0.5141 |
+| S1 | 9 | 80/102 | 78.43% | 0.7403 | 0.7848 | 57.58% | 0.5085 |
+| S2 | 9 | 80/102 | 78.43% | 0.7496 | 0.8292 | 63.64% | 0.4701 |
+
+The predeclared promotion screen requires matching/exceeding A1 patient accuracy without detecting fewer AD patients. It is a development safeguard, not a course or clinical safety standard. Passing the screen is not an automatic replacement or a guarantee of generalisation.
+
+Candidates passing the screen: **none**.
+
+Smoothed training objectives differ from old unsmoothed losses. Validation metrics always use ordinary hard labels. S1 is a loss intervention; S2 changes two schedule components together. Repeated use of the small validation cohort and seed 42 limits claims; the test exposed in Version 1 has not been re-evaluated. A fresh/test score cannot be inferred from any validation peak.
+
+Previous reports, model checkpoints and data remain unchanged. Revised calibration, an explicitly disclosed evaluation procedure and selected-model integration still follow candidate review.
+
+ChatGPT assisted with implementation, tests and this draft. Record the code review and tests actually performed in the Artificial Intelligence Usage Disclosure.
+
+![S1_smoothing_loss.png](figures/S1_smoothing_loss.png)
+
+![S1_smoothing_validation.png](figures/S1_smoothing_validation.png)
+
+![S2_smoothing_loss.png](figures/S2_smoothing_loss.png)
+
+![S2_smoothing_validation.png](figures/S2_smoothing_validation.png)
+
