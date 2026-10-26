@@ -17,6 +17,11 @@ from final_evaluation import evaluate, freeze, recover_lock
 
 
 def main() -> int:
+    # Revised A1 evaluation is explicit; historical commands are not redirected.
+    if len(sys.argv) > 1 and sys.argv[1] in (
+            "revised-freeze", "revised-evaluate", "revised-publish"):
+        from revised_evaluation import main as revised_main
+        return revised_main(sys.argv[1:])
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest='command', required=True)
     for name in ('freeze', 'evaluate', 'recover-lock'):
