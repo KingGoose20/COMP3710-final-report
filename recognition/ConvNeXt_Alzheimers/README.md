@@ -453,3 +453,82 @@ Do not use this research prototype for autonomous clearance of real patients. Pr
 ### Assistance and verification
 
 ChatGPT assisted with implementation, synthetic tests and this draft. Record the source review and local checks actually performed in the Artificial Intelligence Usage Disclosure. No clinical validation or measured human-review outcomes are implied.
+
+
+<!-- COMP3710-A1-REVISED-EVALUATION -->
+## Revised evaluation: selected ConvNeXt A1
+
+Research prototype, not a clinical diagnostic system. This is a revised evaluation on the SAME patient-independent test cohort previously evaluated for Version 1, not a new untouched independent test. Later development used repeatedly consulted training/validation evidence; prior test exposure remains a limitation. Model, temperature, diagnosis cutoff and all three policies were fixed before this revised inference. Do not select another model/policy or tune using these results. Referrals are not correct diagnoses; no clinician accuracy is assumed.
+
+A1 seed 42 / epoch 13 and the regularized CNN epoch 14 were fixed before revised inference. Pretraining was not used. The primary classification cutoff remains 0.5. All three declared referral policies are reported; none is selected according to revised test performance.
+
+### All-patient classification (primary)
+
+| Model | Correct / N | Accuracy | Macro-F1 | AUROC | AD recall | CN recall |
+|---|---:|---:|---:|---:|---:|---:|
+| Regularized CNN (epoch 14) | 79/102 | 77.45% | 0.7258 | 0.8177 | 54.55% | 88.41% |
+| ConvNeXt A1 (seed 42, epoch 13) | 76/102 | 74.51% | 0.7040 | 0.8142 | 57.58% | 82.61% |
+
+### Per-class precision and confusion counts
+
+| Model | CN precision | AD precision | TN | FP | FN | TP |
+|---|---:|---:|---:|---:|---:|---:|
+| cnn | 0.8026 | 0.6923 | 61 | 8 | 15 | 18 |
+| a1 | 0.8028 | 0.6129 | 57 | 12 | 14 | 19 |
+
+### Other units and target reporting
+
+| Model | Patient accuracy | Scan accuracy | Slice accuracy |
+|---|---:|---:|---:|
+| cnn | 77.45% | 72.41% | 68.81% |
+
+cnn: descriptive Wilson 95% patient-accuracy interval 68.43%–84.48%.
+
+| a1 | 74.51% | 68.10% | 68.04% |
+
+a1: descriptive Wilson 95% patient-accuracy interval 65.27%–81.97%.
+
+**Observed A1 accuracy >=0.80:** patient=False, scan=False, slice=False. The primary unit was declared as patient. The brief does not explicitly settle the threshold unit. These observed flags do not guarantee marks, a fresh independent estimate or clinical suitability.
+
+### All fixed policies: safety and workload
+
+| Model | Policy | Auto CN | AD flagged | Refer | AD incorrectly auto CN / all AD | Accepted error | Clinical reviews* |
+|---|---|---:|---:|---:|---:|---:|---:|
+| cnn | reference | 28 | 4 | 70 | 0/33 | 3.12% | 74 |
+| cnn | strict_cn | 15 | 4 | 83 | 0/33 | 5.26% | 87 |
+| cnn | no_auto_cn | 0 | 4 | 98 | 0/33 | 25.00% | 102 |
+| a1 | reference | 50 | 6 | 46 | 5/33 | 14.29% | 52 |
+| a1 | strict_cn | 26 | 6 | 70 | 1/33 | 12.50% | 76 |
+| a1 | no_auto_cn | 0 | 6 | 96 | 0/33 | 50.00% | 102 |
+
+*Clinical reviews assume all AD flags also need confirmation; this workload is calculated, not observed. Referrals are not successful diagnoses. No-auto-CN removes automated negatives by construction. Accepted-subset accuracy does not replace all-patient accuracy. The 0.05 strict-CN cap is a fixed research choice, not a clinical safety bound. Descriptive policy confidence intervals and denominators are in the JSON.
+
+### Probability quality
+
+| Model | Raw NLL | Fixed-T NLL | Raw Brier | Fixed-T Brier |
+|---|---:|---:|---:|---:|
+| cnn | 0.5138 | 0.4839 | 0.1655 | 0.1607 |
+| a1 | 0.6040 | 0.4979 | 0.1780 | 0.1661 |
+
+Paired A1 minus CNN accuracy: -2.94%; exploratory patient-bootstrap interval -10.78% to 4.90%. This interval excludes training-seed/site uncertainty and the effects of previous test exposure.
+
+### Resources and provenance
+
+| Model | Parameters | Completed test-batch seconds | Peak allocated GiB | Batch-1 forward median ms** |
+|---|---:|---:|---:|---:|
+| cnn | 359,922 | 14.943 | 0.04605817794799805 | 1.062 |
+| a1 | 27,818,594 | 17.226 | 0.23639249801635742 | 13.963 |
+
+**Previously measured for these exact checkpoints during the successful validation replay; not remeasured or mislabeled as test latency. New batch timings include hash/decode/preprocess/device transfer and exclude cache writes, recovery verification and setup. Memory is the process allocator peak for inference, not total Windows VRAM or training peak. Earlier training costs remain in the development reports.
+
+### Failure analysis still requires manual work
+
+5 unique cases were selected using the predeclared rule. Complete the private worksheet for the selected A1 checkpoint, including the CNN and all three policy actions. Input panels do not explain model causality. Do not publish medical images or patient identifiers without applicable permission.
+
+### Artificial Intelligence Usage Disclosure — update
+
+ChatGPT assisted with integration, tests and this generated draft. Record the code review, tests, manual observations and corrections actually performed. Automated success is not a clinical assessment.
+
+![Revised patient ROC](figures/a1_revised_test_roc.png)
+
+![Revised fixed-temperature reliability](figures/a1_revised_test_reliability.png)
