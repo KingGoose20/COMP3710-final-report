@@ -403,3 +403,53 @@ ChatGPT assisted with this integration, tests and report draft. Record the code 
 ![Selected-model validation diagnostic](figures/a1_convnext_reliability.png)
 
 ![Selected-model validation diagnostic](figures/a1_risk_coverage.png)
+
+
+<!-- COMP3710-NEGATIVE-POLICY-COMPARISON -->
+## Negative-side caution: fixed referral-policy comparison
+
+Research-only secondary analysis. No model, primary classification cutoff or existing operating rule is changed. The 0.05 cap is a fixed experimental choice, not proof of 95% correctness. These validation patients have already been used repeatedly for model and policy development; cross-fitting does not undo that reuse. Referrals are not diagnoses. A no-auto-CN policy has zero automated negative errors by construction, not demonstrated clinical safety or 100% diagnostic sensitivity. Version 1 has already exposed the test cohort. This extension performs no new test evaluation.
+
+The selected neural networks, ordinary 0.5 class decisions and saved temperatures are unchanged. The original symmetric policy is retained. Two secondary policies are declared before this analysis: (1) accept an original CN proposal only if calibrated P(AD) <= 0.05; (2) accept no CN proposals. The original AD-flag branch is unchanged in both.
+
+**0.95 model confidence is not a demonstrated 95% chance of being correct.** No cutoffs were searched or fitted, and no policy is selected as a winner from this comparison.
+
+For each scope below, counts are shown as research actions. An AD flag is not a confirmed diagnosis. If AD flags also require a clinician, the relevant workload is flags plus unresolved referrals.
+
+### Apparent full-validation results
+
+| Model / policy | Auto CN | AD flags | Unresolved review | AD wrongly auto CN / all AD | AD among auto CN | Research-label coverage | Accepted error |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Regularized CNN (epoch 14) / reference | 26 | 1 | 75 | 1/33 | 3.85% | 26.47% | 3.70% |
+| Regularized CNN (epoch 14) / strict_cn | 14 | 1 | 87 | 0/33 | 0.00% | 14.71% | 0.00% |
+| Regularized CNN (epoch 14) / no_auto_cn | 0 | 1 | 101 | 0/33 | Not estimable | 0.98% | 0.00% |
+| ConvNeXt A1 (seed 42, epoch 13) / reference | 41 | 7 | 54 | 3/33 | 7.32% | 47.06% | 8.33% |
+| ConvNeXt A1 (seed 42, epoch 13) / strict_cn | 21 | 7 | 74 | 3/33 | 14.29% | 27.45% | 14.29% |
+| ConvNeXt A1 (seed 42, epoch 13) / no_auto_cn | 0 | 7 | 95 | 0/33 | Not estimable | 6.86% | 14.29% |
+
+### Existing cross-fitted development diagnostic
+
+| Model / policy | Auto CN | AD flags | Unresolved review | AD wrongly auto CN / all AD | AD among auto CN | Research-label coverage | Accepted error |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Regularized CNN (epoch 14) / reference | 24 | 3 | 75 | 3/33 | 12.50% | 26.47% | 14.81% |
+| Regularized CNN (epoch 14) / strict_cn | 13 | 3 | 86 | 0/33 | 0.00% | 15.69% | 6.25% |
+| Regularized CNN (epoch 14) / no_auto_cn | 0 | 3 | 99 | 0/33 | Not estimable | 2.94% | 33.33% |
+| ConvNeXt A1 (seed 42, epoch 13) / reference | 19 | 1 | 82 | 4/33 | 21.05% | 19.61% | 20.00% |
+| ConvNeXt A1 (seed 42, epoch 13) / strict_cn | 13 | 1 | 88 | 3/33 | 23.08% | 13.73% | 21.43% |
+| ConvNeXt A1 (seed 42, epoch 13) / no_auto_cn | 0 | 1 | 101 | 0/33 | Not estimable | 0.98% | 0.00% |
+
+### What may and may not be concluded
+
+Stricter negative acceptance can only remove automatic CN outputs; it cannot add them or increase the count of AD patients assigned automatic CN for the same input probabilities. This is a logical property, not evidence of improved disease recognition. It also refers more true CN patients. The error fraction among remaining accepted outputs need not improve.
+
+The JSON includes per-class action tables, additional AD/CN referrals relative to the reference, both false-negative denominators and descriptive Wilson intervals. Zero observed events with a small denominator is not proof of zero future risk. If no CN output is accepted, negative predictive value is undefined. No-auto-CN implies every patient requires a clinician if AD flags also require confirmation; zero automatic negatives is not 100% diagnostic recall.
+
+Cross-fitted results reuse the original fold-specific temperatures and confidence cutoffs. They diagnose the development procedure, not the single full-fit rule on an independent cohort. All candidate variants remain secondary; the primary accuracy result is unchanged and the assessment's 0.80 test-accuracy requirement is not established by referral coverage or accepted accuracy.
+
+### Recommendation and next stage
+
+Do not use this research prototype for autonomous clearance of real patients. Preserve the original model and policies and carry the declared secondary variants to a fixed, transparently reported revised evaluation. That evaluation must acknowledge prior test exposure and must not select a policy using the new test results. The historical predict.py interface is not changed by this extension.
+
+### Assistance and verification
+
+ChatGPT assisted with implementation, synthetic tests and this draft. Record the source review and local checks actually performed in the Artificial Intelligence Usage Disclosure. No clinical validation or measured human-review outcomes are implied.
