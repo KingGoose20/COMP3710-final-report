@@ -1,16 +1,16 @@
 {
   "git_revision": "b67bb1327c744fdd9a30fea439efc4a5005fca27",
   "sha256": {
-    "check_baseline.py": "4b6916918afc47ac8f27b27d225c3768d69a1eabb37060b31a0f8398041d7f75",
-    "check_experiment.py": "0781eb5d65014b1c43514eadf69c37ce404cd24d03ec78f9a6f5ae8d111b458a",
-    "confidence_analysis.py": "3b94cafa7eac07d9965bc37911ce54ce240e0506732d545d36222637eca9b975",
-    "dataset.py": "0a3a1f73cf10c523e72252cea5a90e55ad6918bf0a27de55ec153acf408889f7",
-    "modules.py": "ce4bd9b489b11769d26bb068d9f142261fe22a3531ff227eacca168b4f64c396",
-    "modules_v2.py": "e26f671e01badd494137f916d5d891749dd795200ed99353ac6466c197254469",
-    "train.py": "87942febfb7ee876821fc1d9f8837292be82eb6afea4420cc007c44863f2baf4",
-    "training_utils.py": "545d02b6e45cc03fe0df5ba270e2765ad53cb0a378d5515cd3d64a5889f6cd2e",
-    "train_convnext_v2.py": "b1ad56b937627aa14829745735daa74badf54cf971ecb3230b7607635188bc82",
-    "train_experiment.py": "9c8595d18ff3bd6bfdb9c6ce865c59f0e4ea2a87d893da24cd346a029492029d",
-    "V2_EXPERIMENT_PLAN.md": "6da1a1785e1676c2b2e1f22c5783885422b53dc25e9c6c2e306002d4c390c80b"
+    "check_baseline.py": "3ac072d861cce2848694caa1fc03e4068d83719c63c23655388eb5889809d7af",
+    "check_experiment.py": "921b1b5c7fbb546834b590fd6639327c631bc96eebe0ee793ea99af4f764fe1b",
+    "confidence_analysis.py": "71d23dd631828c5ff82f1b5571bf716f1c8f835a58459dee0a22f61d3ce979c6",
+    "dataset.py": "5e6bc17a8cc3d9013b3934719b92d083e1c39abfae5820dfc4a05d8f19e8a8ff",
+    "modules.py": "f9e87782438a22829b962d97fc39b651b4fd0f25dcd2468188b9ec0a238a1cbf",
+    "modules_v2.py": "eaac754ae1665fc712ea8d1b4e747038647b47deeeeec3aff2536f37b38403e9",
+    "train.py": "126752de5179adb2f65221c1281332429aa15a425ccfb8419bbcc7fca1cf761c",
+    "training_utils.py": "df49b42613853aebf6415926f5b9f5c9621ef3311c2addb9b136ca8fa0286409",
+    "train_convnext_v2.py": "df83692702e41bbbd9d994862b13d89ac31c77a4eb6c2befabcb83e0a6f6175f",
+    "train_experiment.py": "0ed63f650ab2cbf85155036b5d9dacb6c0a465856071d80d61eb0ef1e7dea953",
+    "V2_EXPERIMENT_PLAN.md": "8e980f02e32da1fad603286888cc124af3853650bca20499caecc03434bb2625"
   }
 }

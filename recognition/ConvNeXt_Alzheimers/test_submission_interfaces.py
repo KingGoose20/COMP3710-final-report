@@ -98,6 +98,12 @@ class StrictLoadingTests(unittest.TestCase):
         self.assertEqual(pred.source_directory(value),base/'historical_runtime')
         value['source_code_sha256']['dataset.py']='0'*64
         with self.assertRaises(ValueError):pred.source_directory(value)
+    def test_frozen_bytes_match_retained_selection_not_only_self_manifest(self):
+        base=Path(__file__).resolve().parent
+        selected=json.loads((base/'A1_SELECTED_MODEL.json').read_text())
+        expected=selected['source_code_sha256']
+        for name in v2.SOURCE_FILES:
+            self.assertEqual(pred.sha(base/'historical_runtime'/name),expected[name],name)
 
 class DispatchAndPolicyTests(unittest.TestCase):
     def test_a1_recipe_is_original_not_schedule_experiment(self):
