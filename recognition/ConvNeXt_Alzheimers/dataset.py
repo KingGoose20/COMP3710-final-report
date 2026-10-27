@@ -317,3 +317,14 @@ def make_loader(dataset: ADNISliceDataset, *, batch_size: int = 16,
     return DataLoader(dataset, batch_size=batch_size, shuffle=shuffle,
                       num_workers=num_workers, drop_last=False, generator=generator,
                       worker_init_fn=seed_worker, pin_memory=pin_memory)
+
+
+def reproduce_approved_partitions(data_root, output_dir, reference_splits_dir=None):
+    """Recreate exact recorded assignments in a new directory; no private pointers."""
+    from submission_prepare import reproduce
+    return reproduce(data_root, output_dir, reference_splits_dir)
+
+
+if __name__ == '__main__':
+    from submission_prepare import main
+    main()

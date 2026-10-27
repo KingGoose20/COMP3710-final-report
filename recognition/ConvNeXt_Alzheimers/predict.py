@@ -13,10 +13,14 @@ import argparse
 from pathlib import Path
 import sys
 
-from final_evaluation import evaluate, freeze, recover_lock
-
-
 def main() -> int:
+    if len(sys.argv) > 1 and sys.argv[1] == 'infer':
+        from submission_prediction import main as inference_main
+        inference_main(sys.argv[2:])
+        return 0
+    # Legacy evaluation keeps its original integrity/explicit-test guards.
+    # Its frozen source revision is documented in HISTORICAL_REPLAY.md.
+    from final_evaluation import evaluate, freeze, recover_lock
     # Revised A1 evaluation is explicit; historical commands are not redirected.
     if len(sys.argv) > 1 and sys.argv[1] in (
             "revised-freeze", "revised-evaluate", "revised-publish"):
