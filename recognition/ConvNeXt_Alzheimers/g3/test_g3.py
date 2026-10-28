@@ -65,6 +65,26 @@ class ModelTests(unittest.TestCase):
         gr=torch.autograd.grad(gm.loss(rhs,0),(h,*head.parameters()))
         for a,b in zip(gl,gr):torch.testing.assert_close(a,b,atol=1e-10,rtol=1e-10)
 
+    def test_uniform_reference_shared_gradients_clipping_and_AdamW_update(self):
+        v2.seed_everything(57)
+        original=nn.ModuleDict({'feature':nn.Linear(3,768),'head':nn.Linear(768,2)}).double()
+        reference=deepcopy(original);config=core.base_config('cpu')
+        a=v2.make_optimizer(original,config);b=v2.make_optimizer(reference,config)
+        x=torch.randn(5,3,dtype=torch.float64)
+        # Production historical G2 path versus synthetic uniform feature/head
+        # algebra. No attention constructor or parameters in either optimiser.
+        z=original['head'](original['feature'](x))
+        uniform=reference['head'](reference['feature'](x).mean(0))
+        left=core.scan_loss(z,1,'G2');right=gm.loss(uniform,1)
+        torch.testing.assert_close(left,right,atol=1e-10,rtol=1e-10)
+        left.backward();right.backward()
+        for p,q in zip(original.parameters(),reference.parameters()):
+            torch.testing.assert_close(p.grad,q.grad,atol=1e-10,rtol=1e-10)
+        for net,opt in ((original,a),(reference,b)):
+            torch.nn.utils.clip_grad_norm_(net.parameters(),5.,error_if_nonfinite=True);opt.step()
+        for p,q in zip(original.parameters(),reference.parameters()):
+            torch.testing.assert_close(p,q,atol=1e-10,rtol=1e-10)
+
     def test_attention_nonuniform_fixture_and_permutation_and_k1(self):
         a=gm.Attention().double();h=torch.randn(7,768,dtype=torch.float64)
         self.assertAlmostEqual(float(a(h).sum()),1.)

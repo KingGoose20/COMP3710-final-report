@@ -15,9 +15,9 @@
   "synthetic_checks": "see committed test_g3.py and implementation handback for actual execution outcomes",
   "synthetic_verification": {
     "status": "PASSED",
-    "new_G3_tests": 14,
+    "new_G3_tests": 15,
     "inherited_G012_tests": 35,
-    "total": 49,
+    "total": 50,
     "command": "python -B -m unittest g3.test_g3 g012.test_g012 -v",
     "no_real_MRI_execution": true
   },

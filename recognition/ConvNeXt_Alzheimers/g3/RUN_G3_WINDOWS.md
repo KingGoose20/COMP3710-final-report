@@ -36,7 +36,7 @@ if ($LASTEXITCODE -ne 0) { throw 'G3 verify stopped. Preserve evidence; inspect 
 
 ## 2. Run synthetic tests only
 
-Expected 49 tests / OK (14 G3 +35 inherited G012). All tensors/rows are artificial.
+Expected 50 tests / OK (15 G3 +35 inherited G012). All tensors/rows are artificial.
 
 ```powershell
 $ErrorActionPreference = 'Stop'
