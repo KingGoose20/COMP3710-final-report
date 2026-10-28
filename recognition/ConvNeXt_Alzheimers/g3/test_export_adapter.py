@@ -15,6 +15,12 @@ def summary():
 
 
 class ExportTests(unittest.TestCase):
+    def test_plan_with_same_study_name_has_no_rows_and_passes_unchanged(self):
+        plan={'study':'G3_Seed42','configuration':{'variant':'G3'},'control_mode':'REUSE_G2'}
+        before=deepcopy(plan);self.assertIs(fix.sanitize_summary(plan),plan)
+        self.assertEqual(plan,before);results.privacy(plan)
+        with self.assertRaises(dataset.DataError):fix.sanitize_summary({'study':'G3_Seed42','rows':None})
+
     def test_real_receipt_shape_rejected_before_and_safe_after(self):
         value=summary();original=deepcopy(value)
         with self.assertRaises(dataset.DataError):results.privacy(value)
@@ -70,6 +76,62 @@ class ExportTests(unittest.TestCase):
                 results.bundle(args);results.bundle(args)
             with zipfile.ZipFile(folder/'COMP3710_G3_Seed42_Results.zip') as z:
                 self.assertEqual(z.namelist(),['comparison.json']);self.assertEqual(json.loads(z.read('comparison.json')),value)
+
+    def test_complete_frozen_comparison_plan_history_plot_and_zip_pipeline(self):
+        import zipfile
+        from types import SimpleNamespace
+        import train_convnext_v2 as v2
+        from g012 import core
+        from g012.test_g012 import rows,fetch
+        from g012.engine import identity as old_identity
+        from g3 import storage as st,execution as ex,operations as ops,model as gm
+        from g3.test_g3 import Toy
+        v2.seed_everything(42)
+        import torch
+        metrics,pred=ops.predict(Toy(),core.group_records(rows('validation'),'validation'),fetch,torch.device('cpu'),'G3')
+        a1={k:deepcopy(metrics[k]) for k in ('slice','scan','patient')}
+        a1['patient']['macro_f1']=.8012151782643586
+        with tempfile.TemporaryDirectory(prefix='g3 full export pipeline spaces ') as tmp:
+            root=Path(tmp);historical=root/'historical';historical.mkdir()
+            plan={'study':'G3_Seed42','sources':{},'configuration':gm.configuration(),
+                  'control_mode':'REUSE_G2','a1_configuration':{'synthetic':True}}
+            bundle=SimpleNamespace(manifest_hashes={});args=SimpleNamespace(study_root=root,historical_root=historical)
+            hist=[{'epoch':e,'patient_accuracy':metrics['patient']['accuracy'],'patient_macro_f1':metrics['patient']['macro_f1'],
+                'patient_log_loss':metrics['patient']['log_loss'],'patient_brier':metrics['patient']['brier'],
+                'ad_recall':metrics['patient']['per_class']['AD']['recall'],'nc_recall':metrics['patient']['per_class']['NC']['recall'],
+                'selected_as_best':e==1} for e in range(1,13)]
+            schedules=[{'epoch':e,'order_digest':'synthetic','augmentation_digest':'synthetic'} for e in range(1,13)]
+            st.immutable_json(root/'PRIVATE_matched_schedule.json',{'epochs':schedules})
+            st.immutable_json(root/'PRIVATE_a1_reference.json',{'predictions':pred,'metrics':a1,'history':hist,
+                'completed_epoch':21,'parameters':27818594,'recorded_resources':{}})
+            st.immutable_json(root/'preparation.json',{'execution_seconds':1.,'images_decoded':0})
+            st.immutable_json(root/'initialization.json',{'shared_digest':'synthetic','checkpoint_sha256':'synthetic'})
+            replay={'passed':True,'checks':{'attention':deepcopy(summary()['rows'][0]['replay']['checks']['attention'])},
+                    'absolute_probability_tolerance':2e-5,'inference_seconds':1.,'resources':{}}
+            for name,folder in [('G2',historical/'G2'),('G3',root/'G3')]:
+                folder.mkdir();identity=old_identity(plan,'G2',{}) if name=='G2' else ex.identity(plan,'G3',{})
+                st.immutable_json(folder/'PRIVATE_selected_predictions.json',pred)
+                st.immutable_json(folder/'training_summary.json',{'identity':identity,'metrics':metrics,'selected_epoch':1,
+                    'completed_epoch':12,'stop_reason':'PATIENCE_AFTER_MINIMUM_12','committed_epoch_loop_seconds':10.})
+                st.write_text_atomic(folder/'history.csv',st.history_csv(hist))
+                st.immutable_json(folder/'PRIVATE_order_augmentation_digests.json',schedules)
+                st.immutable_json(folder/'completion.json',{'identity':identity,'hashes':{}})
+                st.immutable_json(folder/'active_budget.json',{'charged_seconds':11.,'sessions':[]})
+                st.immutable_json(folder/'run_status.json',{'status':'COMPLETED_TRAINING'})
+                st.immutable_json(folder/'checkpoint_replay.json',replay)
+            guard=results.privacy
+            with patch.object(st,'context',return_value=(plan,root,{},bundle,{})),\
+                 patch('g012.engine.verify_replay',return_value={**replay,'checks':{}}),\
+                 patch.object(ex,'verify_replay',return_value=replay):
+                fix.compare(args);fix.compare(args);results.bundle(args);results.bundle(args)
+            self.assertIs(results.privacy,guard)
+            folder=root/'aggregate_exports'/st.read(root/'latest_aggregate.json')['directory']
+            comparison=st.read(folder/'comparison.json');public_plan=st.read(folder/'plan.json')
+            self.assertEqual(public_plan['study'],'G3_Seed42');self.assertNotIn('rows',public_plan)
+            self.assertTrue(comparison['rows'][-1]['replay']['checks']['attention']['ordering_unchanged'])
+            with zipfile.ZipFile(folder/'COMP3710_G3_Seed42_Results.zip') as z:
+                self.assertEqual(set(z.namelist()),set(results.ALLOWLIST))
+                for name in z.namelist():self.assertEqual(z.read(name),(folder/name).read_bytes())
 
 
 if __name__=='__main__':unittest.main(verbosity=2)

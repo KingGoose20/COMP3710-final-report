@@ -13,10 +13,14 @@ replay receipts, all 27 trained source bindings, frozen plan, checkpoint, metric
 and budgets are unchanged. Do not regenerate the plan or rerun training/replay.
 The adapter separately requires its own exact source to be committed in HEAD.
 
-Six synthetic regression tests cover the actual replay-check shape, retained
-privacy rejection, unchanged input receipt, scoped adaptation, output-free check
-and allowlisted ZIP roundtrip. The implementation-time synthetic fixture omitted
-this real attention replay-check shape, allowing the defect to escape that suite.
+Eight synthetic regression tests cover the actual replay-check shape, retained
+privacy rejection, unchanged input receipt, scoped adaptation, output-free check,
+the plan sharing the study name without comparison rows, and the complete frozen
+comparison/plan/history/plot/ZIP pipeline, including repeated export. The first
+adapter incorrectly assumed every object with this study name had rows; its
+check-only run stopped before reaching the plan. That was inadequate verification.
+The implementation-time synthetic fixture also omitted the real attention replay
+check shape, allowing the original privacy-key defect to escape that suite.
 Codex assisted the repair and verification. No inference or training is involved.
 
 Use these replacement blocks after the successful selected-checkpoint replay.

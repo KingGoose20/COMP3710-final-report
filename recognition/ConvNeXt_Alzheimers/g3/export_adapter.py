@@ -18,7 +18,9 @@ from g3 import results,storage as st
 
 
 def sanitize_summary(value):
-    if isinstance(value,dict) and value.get('study')=='G3_Seed42':
+    # The public plan has the same study name but is not a comparison payload.
+    if isinstance(value,dict) and value.get('study')=='G3_Seed42' and 'rows' in value:
+        core.require(isinstance(value['rows'],list),'Comparison rows must be a list.')
         for row in value['rows']:
             attention=row.get('replay',{}).get('checks',{}).get('attention',{})
             if 'slice_order_unchanged' not in attention:continue
@@ -44,7 +46,7 @@ def compare(args,check_only=False):
     def public_guard(value):
         sanitize_summary(value)
         frozen_guard(value)
-        if check_only and isinstance(value,dict) and value.get('study')=='G3_Seed42':raise Checked()
+        if check_only and isinstance(value,dict) and value.get('study')=='G3_Seed42' and 'rows' in value:raise Checked()
     # Scoped output adaptation: the original computation, identity/native/replay
     # checks and privacy rejection remain active. No private receipt is edited.
     with patch.object(results,'privacy',side_effect=public_guard):
