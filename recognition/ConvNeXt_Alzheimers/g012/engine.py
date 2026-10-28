@@ -72,8 +72,9 @@ def initial_state(model, optimizer, expected, environment, initial):
 
 
 def advance(state, model, optimizer, train_bags, val_bags, fetch_train, fetch_val, device,
-            variant, epoch, resource=None):
+            variant, epoch, resource=None, operations=None):
     """A full epoch transaction. Used unchanged by the synthetic recovery test."""
+    core = operations if operations is not None else globals()['core']
     require(epoch == state['epoch']+1, 'Recovery must repeat from the complete epoch boundary.')
     matched = core.schedule(train_bags, epoch)
     # Separate model stochastic-depth stream from order/augmentation streams.
@@ -96,6 +97,9 @@ def advance(state, model, optimizer, train_bags, val_bags, fetch_train, fetch_va
            'scan_accuracy':metrics['scan']['accuracy'],'scan_log_loss':metrics['scan']['log_loss'],
            'slice_accuracy_diagnostic':metrics['slice']['accuracy'],'slice_log_loss_diagnostic':metrics['slice']['log_loss'],
            'selected_as_best':improved}
+    if operations is not None:
+        row.update({'validation_attention_'+k+'_mean':v['mean'] for k,v in metrics['attention'].items()})
+        row['native_scan_CE'] = metrics['native_scan_CE']
     state['history'].append(row); state['epoch'] = epoch
     state['order_augmentation_digests'].append({'epoch':epoch,'order_digest':matched['order_digest'],
                                               'augmentation_digest':matched['augmentation_digest']})
@@ -235,17 +239,26 @@ def smoke(args):
             raise
 
 
-def supervised(args, resume=False, replay_only=False):
+def supervised(args, resume=False, replay_only=False, runtime=None):
+    # Optional study services reuse this exact OS-job/lease supervisor. Defaults
+    # retain G012 behaviour; its historical byte bindings live in its worktree.
+    st = runtime.storage if runtime is not None else globals()['st']
+    core = runtime.operations if runtime is not None else globals()['core']
+    identity = runtime.identity if runtime is not None else globals()['identity']
+    verify_replay = runtime.verify_replay if runtime is not None else globals()['verify_replay']
     plan, root, binding, bundle, groups = st.context(args)
     with v2.run_lock(root):
         expected = identity(plan,args.variant,bundle.manifest_hashes)
-        for variant in core.VARIANTS:
+        for variant in (() if runtime is not None else core.VARIANTS):
             r = st.read(root/('smoke-'+variant)/'smoke.json')
             require(r['passed'] and r['identity'] == identity(plan,variant,bundle.manifest_hashes)
                     and r['checkpoint_sha256'] == st.sha(root/('smoke-'+variant)/'PRIVATE_smoke.pt'),
                     'All three fixed smokes must pass before real training.')
-        historical = st.read(root/'a1_historical_regression.json')
-        require(historical['passed'] and historical['plan_sha256'] == core.digest(plan),'Historical regression check required.')
+        if runtime is not None:
+            runtime.ready(plan,root,bundle,args.variant)
+        else:
+            historical = st.read(root/'a1_historical_regression.json')
+            require(historical['passed'] and historical['plan_sha256'] == core.digest(plan),'Historical regression check required.')
         folder = root/args.variant
         if replay_only and not folder.exists():
             print('REPLAY_NOT_AVAILABLE_PROTOCOL_INCOMPLETE',args.variant); return
@@ -274,24 +287,26 @@ def supervised(args, resume=False, replay_only=False):
             require((folder/'PRIVATE_resume.pt').is_file() or (folder/'PRIVATE_previous.pt').is_file(),
                     'Existing attempt has no recoverable checkpoint; do not start a replacement.')
         st.check_disk(root)
-        used = sum(st.read(p)['charged_seconds'] for p in root.glob('G[012]/active_budget.json'))
-        require(used < st.TOTAL_CAP,'Nine-hour study cap exhausted.')
+        used = sum(st.read(p)['charged_seconds'] for p in root.glob('G[012]/active_budget.json' if runtime is None else runtime.budget_glob))
+        require(used < st.TOTAL_CAP,'Nine-hour study cap exhausted.' if runtime is None else 'G3 three-hour total active cap exhausted.')
         ledger = Budget(folder/'active_budget.json',cap=st.CAP)
+        run_deadline = ledger.deadline - (runtime.replay_reserve_seconds if runtime is not None and not replay_only else 0.)
         gate = folder/('gate-'+uuid.uuid4().hex+'.json'); process = None; job = None; outcome = 'INTERRUPTED'
         v2.atomic_json(folder/'run_status.json',{'status':'RUNNING'})
         try:
             with (folder/'execution.log').open('ab',buffering=0) as log:
-                command = [sys.executable,'-B',str(st.BASE/'g012'/'run.py'),'_replay_worker' if replay_only else '_worker',
+                command = [sys.executable,'-B',str(st.BASE/'g012'/'run.py' if runtime is None else runtime.entry),'_replay_worker' if replay_only else '_worker',
                     '--data-root',str(args.data_root),'--splits-dir',str(args.splits_dir),
                     '--study-root',str(root),'--variant',args.variant,'--gate',str(gate)]
+                if runtime is not None: command.extend(runtime.worker_arguments(args))
                 process = subprocess.Popen(command,stdout=log,stderr=subprocess.STDOUT,
                                            creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
                 job = WindowsJob(process)
                 v2.atomic_json(gate,{'released':True,'fresh':fresh})
                 while process.poll() is None:
-                    if not ledger.reserve():
+                    if not ledger.reserve() or time.monotonic() >= run_deadline:
                         job.close(); process.wait(timeout=30); outcome = 'WALL_LIMIT_INCONCLUSIVE'; break
-                    time.sleep(min(.5,max(0.,ledger.deadline-time.monotonic())))
+                    time.sleep(min(.5,max(0.,run_deadline-time.monotonic())))
                 else:
                     if process.returncode == 0:
                         st.verify_completion(folder,expected)
@@ -300,14 +315,14 @@ def supervised(args, resume=False, replay_only=False):
                     else:
                         status = st.read(folder/'worker_failure.json')['status'] if (folder/'worker_failure.json').exists() else 'FAILED_NEEDS_INVESTIGATION'
                         outcome = status
-                if time.monotonic() >= ledger.deadline:
+                if time.monotonic() >= run_deadline:
                     outcome = 'WALL_LIMIT_INCONCLUSIVE'
         finally:
             if job is not None: job.close()
             if process is not None and process.poll() is None: process.kill(); process.wait(timeout=30)
             ledger.finish(outcome)
             v2.atomic_json(folder/'run_status.json',{'status':outcome,'replay_required':not (folder/'checkpoint_replay.json').exists()})
-        print('G012_RUN',args.variant,outcome,flush=True)
+        print('G012_RUN' if runtime is None else 'G3_RUN',args.variant,outcome,flush=True)
         require(outcome == 'COMPLETED_TRAINING','Stopped at a blocker/incomplete run; preserve evidence and report status.')
 
 
