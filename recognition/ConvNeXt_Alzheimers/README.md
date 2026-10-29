@@ -3,15 +3,17 @@
 **COMP3710 — Semester 2, 2026**  
 **Author:** Angus Walker  
 **Student identifier supplied:** s4963173  
-**Status:** A1 retained; schedule-only experiment completed as a negative result. Explicit preparation/training/prediction interfaces have passed clean-code verification in the existing pinned environment. The 0.80 test requirement remains unmet. Author-reported review and the remaining submission actions are listed below; full-mark readiness is not claimed.
+**Status (29 October 2026):** A1 retained; schedule-only, G012 and G3 studies remain negative under their original patient-based screens. **Primary test-slice accuracy: 3,157/4,640 = 68.04%, below 80%.** The saved-evidence review supports no substantial quick checkpoint change. Submission interfaces retain the completed clean-code verification in the pinned environment; full-mark readiness is not claimed.
 
 ## 1. Problem, intended user and principal finding
 
 This project investigates a research-only assistant that classifies structural brain MRI images from the supplied ADNI data as Alzheimer's disease (AD) or cognitively normal (CN), and refers uncertain predictions for human review. The supplied folders use `NC`; the code maps this to the control class described as CN in the assessment. Neither class predictions nor confidence scores constitute clinical diagnoses.
 
-The main question is whether a scratch-trained ConvNeXt improves patient classification and confidence-based referral enough to justify its computational cost compared with a small CNN. The selected model is ConvNeXt A1 (`scratch_augmented`, seed 42, selected epoch 13). The baseline is the regularized CNN selected at epoch 14.
+The main question is whether a scratch-trained ConvNeXt improves image classification and confidence-based referral enough to justify its computational cost compared with a small CNN. Historical development prioritised patient-aggregate selection and referral; the user-supplied Ed clarification now establishes individual 2D test slices as the assessment accuracy unit. The selected model is ConvNeXt A1 (`scratch_augmented`, seed 42, selected epoch 13). The baseline is the regularized CNN selected at epoch 14.
 
-A1 achieved 83.33% selected validation-patient accuracy but **74.51% (76/102)** in the disclosed revised evaluation, compared with **77.45% (79/102)** for the CNN. The specified minimum 0.80 test-accuracy target was **not met**. A1 detected one more AD patient but produced four additional false positives. Calibration improved some revised-evaluation probability-quality measurements. Stricter negative acceptance reduced automated false negatives at the cost of additional clinical review; it did not make the classifier more accurate or establish clinical safety.
+The retained A1 checkpoint was originally selected using patient-level validation metrics. Following the **user-supplied Ed clarification** that the assessed prediction is an individual 2D slice, the primary reported test accuracy is **3,157/4,640 (68.04%)**, below the specified **0.80** target. The CNN records **3,193/4,640 (68.81%)** on the same slices. A1 is 555 correct slices short of 3,712 required for 80%. These results were already saved in the retained evaluation; the correction is reporting alignment, not new inference.
+
+The **85/102 (83.33%) validation-patient** and **76/102 (74.51%) test-patient** accuracies use explicit probability aggregation and remain additional engineering analyses. CNN test-patient accuracy is 79/102 (77.45%). Calibration and referral findings below concern patients, not calibrated slices. They do not remedy the primary image-accuracy shortfall. No author/date/permalink or marking consequence is invented for the supplied clarification.
 
 **Evaluation qualification:** the same patient-independent test cohort had already been evaluated for Version 1. Subsequent development used training and repeatedly consulted validation data; the revised checkpoint, temperatures and policies were fixed before revised inference. This is not a new untouched independent test. Prior test exposure, validation reuse and limited patient numbers constrain the conclusions.
 
@@ -67,15 +69,15 @@ The baseline contains four stride-2 Conv/BatchNorm/ReLU blocks with channels 16,
 
 ### Aggregation and evaluation units
 
-Slice probabilities are averaged within each scan; scan probabilities are then averaged within each patient. This gives each scan equal weight within its patient. Classification is AD for probability >=0.5, otherwise CN. Patient-level performance is primary; scan and slice results are reported separately. Single-slice cross-entropy training and hierarchical probability aggregation are not the same objective. In A1, patients with more scans contribute more training examples.
+Slice probabilities are averaged within each scan; scan probabilities are then averaged within each patient. This gives each scan equal weight within its patient. Classification is AD for probability >=0.5, otherwise CN. Individual slice test accuracy is primary for assessment. Scan/patient performance uses these explicit additional aggregation rules and is secondary. Patient disjointness is the split constraint at every scoring unit. Single-slice cross-entropy training and hierarchical probability aggregation are not the same objective. In A1, patients with more scans contribute more training examples.
 
 ## 5. Development experiments and selection
 
-Training used AdamW, float32, gradient clipping and the recorded deterministic/recovery settings. A1 used batch size 8 with four-batch accumulation, peak learning rate 0.0003, three warmup epochs, cosine decay to 0.000001, weight decay 0.05 for matrix/kernel parameters and no decay for biases/one-dimensional parameters. The limit was 30 epochs, with patience 8 after at least 12 epochs. Workers were zero in the checked Windows recovery path.
+Training used hard-label unweighted cross-entropy without label smoothing for A1, AdamW, float32, global gradient clipping at norm 5 and the recorded deterministic/recovery settings. A1 used batch size 8 with four-batch accumulation, peak learning rate 0.0003, three warmup epochs, cosine decay to 0.000001 at the original epoch-30 endpoint, weight decay 0.05 for matrix/kernel parameters and no decay for biases/one-dimensional parameters. The limit was 30 epochs, with patience 8 after at least 12 epochs. Workers were zero in the checked Windows recovery path.
 
-Version 1 selected checkpoints by validation patient macro-F1, then lower log loss. V2 explicitly changed to patient accuracy, then macro-F1, then lower log loss, retaining the earliest exact tie. This is a documented change, not retrospective relabelling of the first experiments.
+The following are historical project decisions, not course-mandated selection criteria. Version 1 selected checkpoints by validation patient macro-F1, then lower patient log loss. V2 explicitly changed to patient accuracy, then macro-F1, then lower log loss, retaining the earliest exact tie. This is a documented change, not retrospective relabelling of the first experiments.
 
-| Development experiment | Selected epoch | Patient accuracy | Macro-F1 | AUROC | AD recall |
+| Development experiment | Selected epoch | Validation patient accuracy | Validation patient macro-F1 | Validation patient AUROC | Validation patient AD recall |
 |---|---:|---:|---:|---:|---:|
 | Initial CNN | 7 | 78.43% | 0.7292 | 0.8327 | 51.52% |
 | Regularized CNN | 14 | 78.43% | 0.7496 | 0.8037 | 63.64% |
@@ -87,9 +89,9 @@ Version 1 selected checkpoints by validation patient macro-F1, then lower log lo
 | S1: label smoothing | 9 | 78.43% | 0.7403 | 0.7848 | 57.58% |
 | S2: smoothing and revised schedule | 9 | 78.43% | 0.7496 | 0.8292 | 63.64% |
 
-All rows use the same validation patients and are selected development scores. They are not independent test estimates. A1 exceeded 80% in one selected epoch, but its two replications did not reproduce that accuracy. The three-run mean does not represent an ensemble or three independent patient cohorts. Eleven validation patients were misclassified by all three A1 seeds, including nine AD patients. This finding does not establish the cause or justify removing these patients.
+All rows use the same validation patients and are selected development scores. They are not independent test estimates. A1 exceeded 80% patient-validation accuracy in one selected epoch, but this is not the image-based course target; its two replications did not reproduce that patient result. The three-run mean does not represent an ensemble or three independent patient cohorts. Eleven validation patients were misclassified by all three A1 seeds, including nine AD patients. This finding does not establish the cause or justify removing these patients.
 
-The training/validation slice-accuracy gap and increasing validation log loss indicated persistent overfitting. A2's equal-patient weighting did not improve the comparison. S1 and S2 reduced some highly confident errors, and S2 improved patient log loss, but neither matched A1's classification result. These negative findings are retained. Changes from Version 1 to V2 include more than augmentation, so the improvement is not attributed causally to augmentation alone.
+Near-perfect later training slice accuracy and increasing validation slice log loss are consistent with overfitting. Most A1/V2 histories do not record per-epoch slice-validation accuracy, so a measured per-epoch training/validation accuracy gap must not be inferred from their loss columns. A2's equal-patient weighting did not improve the comparison. S1 and S2 reduced some highly confident errors, and S2 improved patient log loss, but neither matched A1's classification result. These negative findings are retained. Changes from Version 1 to V2 include more than augmentation, so the improvement is not attributed causally to augmentation alone.
 
 A1 remained selected based on development evidence. No new model, ensemble or classification cutoff was chosen using the revised test outcomes.
 
@@ -97,7 +99,7 @@ A1 remained selected based on development evidence. No new model, ensemble or cl
 
 After a scoped source/evidence review, one predeclared experiment changed only the A1 cosine endpoint from epoch 30 to 12. It retained hard labels, unweighted loss, the 3e-4 peak, 1e-6 floor, three warmup epochs, rotations, batch/accumulation, optimizer grouping, clipping, precision and selection rule. The peak remained at epoch 4; the floor was reached at epoch 12 and then held. The experiment plan and code were committed before training.
 
-| Seed | Selected / completed epoch | Correct / 102 | AD detected / 33 | Patient accuracy | Patient NLL | Paired correct change |
+| Seed | Selected / completed epoch | Validation patients correct / 102 | Validation AD patients detected / 33 | Validation patient accuracy | Validation patient NLL | Paired correct-patient change |
 |---|---:|---:|---:|---:|---:|---:|
 | 42 | 7 / 15 | 81 | 19 | 79.41% | 0.505059 | -4 |
 | 43 | 5 / 13 | 76 | 17 | 74.51% | 0.495243 | -4 |
@@ -110,13 +112,60 @@ The predeclared screen failed: summed correct was 238 rather than at least 251; 
 **Decision:** record this as a negative experiment and retain A1, scratch_augmented, seed 42, epoch 13. No model promotion, calibration refit, threshold search or new test query followed. Detailed private histories, paired differences and fixed last-five summaries are retained under the separate schedule-only namespace; the public plan remains `SCHEDULE_ONLY_PLAN.md`.
 
 
+### Later grouped-supervision and attention studies
+
+G0 retained slice CE but changed grouping/update structure; G1 used negative log of the mean correct-class slice probability; G2 used CE of mean slice logits. G0 versus A1 therefore changes batching/update structure; G1 versus G0 isolates its scan loss under matched grouped training; G2 includes native logit-pooling inference. G3 used a fixed gated-attention 768→128→1 score on the original head inputs and weighted original slice logits. The verified historical G2 served as the fixed uniform control; no U3 or extra seed was run. All used scratch initialisation and the approved patient splits. See frozen [G012 plan](g012/G012_PLAN.md), [G3 plan](g3/G3_PLAN.md) and [control decision](g3/G3_CONTROL_COMPARABILITY.md).
+
+| Run (seed 42) | Selected / completed epoch | Validation patients correct / 102 | Validation AD patients detected / 33 | Original patient screen | Selected validation slice-head correct / 4660 |
+|---|---:|---:|---:|---|---:|
+| G0 | 16 / 24 | 75 | 21 | Fail | 3231 |
+| G1 | 7 / 15 | 69 | 0 | Fail | 2600 |
+| G2 | 20 / 28 | 81 | 27 | Fail | 3076 |
+| G3 | 14 / 22 | 73 | 24 | Fail | 2771 |
+
+All completed normally by patience; original integrity/replay checks passed. The patient screen required at least 86 correct, at least 22 AD detections and macro-F1 at least exact A1 0.8012151782643586. Lower NLL was a reported trade-off, with deterioration over 0.02 a warning, not an extra gate. None was promoted. G3 attention learned nonuniform weights, but its selected patient accuracy, macro-F1, ranking and probability quality were worse than G2; this fixed one-seed negative does not refute attention generally. G1's smaller raw training loss is partly algebraic and is not evidence of better recognition.
+
+G0/G1/G2 cumulative active charges including selected replay were 7,026.501 / 3,399.968 / 8,178.031 seconds. G2 recovered the same attempt after a disk guard, with partial work retained in its charge. G3 charged 6,202.907 training + 19.844 replay = 6,222.751 seconds; its separately timed preparation/smoke were 3.814/8.026 seconds. G3 committed epoch-loop time was 6,166.810 seconds and peak training allocated GPU memory 2.5497 GiB (G2 2.5467 GiB). Fewer completed epochs, different timing scopes and interruptions prevent a claim that G3 was intrinsically faster. These scopes are not the original A1 component timing in Section 8.
+
+### Retrospective slice-alignment review and stopping decision
+
+The finite saved-evidence review found no available checkpoint supporting at least a five-percentage-point slice-validation improvement over A1 without lower slice macro-F1 or AD recall. The threshold (3,597/4,660) was a time-prioritisation screen, not a course rule. No candidate was promoted, inferred or replayed. A1 is the highest observed slice accuracy among the historically selected checkpoints in this inventory, not a proven best epoch from missing metrics or the best possible classifier.
+
+| Run / seed | Selected / completed epoch | Validation slices correct / N | Validation slice accuracy | AD precision / recall | CN precision / recall | Slice macro-F1 | Slice AUROC | Slice NLL | Slice Brier |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Initial CNN / 42 | 7 / 12 | 3220 / 4660 | 69.10% | 69.92% / 52.82% | 68.69% / 82.00% | 0.674658 | 0.778987 | 1.081850 | 0.253251 |
+| CNN / 42 | 14 / 22 | 3184 / 4660 | 68.33% | 66.67% / 56.70% | 69.33% / 77.54% | 0.672414 | 0.744020 | 2.023849 | 0.287649 |
+| V1 ConvNeXt / 42 | 11 / 19 | 3076 / 4660 | 66.01% | 62.93% / 56.21% | 68.01% / 73.77% | 0.650798 | 0.720507 | 2.245499 | 0.310535 |
+| A1 / 42 | 13 / 21 | 3364 / 4660 | 72.19% | 71.44% / 61.80% | 72.65% / 80.42% | 0.713046 | 0.788117 | 1.559219 | 0.248017 |
+| A2 / 42 | 12 / 20 | 3125 / 4660 | 67.06% | 65.16% / 54.76% | 68.18% / 76.81% | 0.658733 | 0.727529 | 1.555233 | 0.284952 |
+| A1 seed 43 / 43 | 8 / 16 | 3232 / 4660 | 69.36% | 67.27% / 59.76% | 70.71% / 76.96% | 0.684961 | 0.757438 | 1.283005 | 0.262683 |
+| A1 seed 44 / 44 | 7 / 15 | 3277 / 4660 | 70.32% | 67.40% / 63.64% | 72.41% / 75.62% | 0.697237 | 0.773052 | 0.982948 | 0.238141 |
+| S1 / 42 | 9 / 17 | 3195 / 4660 | 68.56% | 67.15% / 56.55% | 69.40% / 78.08% | 0.674404 | 0.737702 | 0.770366 | 0.247006 |
+| S2 / 42 | 9 / 17 | 3310 / 4660 | 71.03% | 68.32% / 64.27% | 72.96% / 76.38% | 0.704334 | 0.758241 | 0.722501 | 0.226722 |
+| Schedule seed 42 / 42 | 7 / 15 | 3343 / 4660 | 71.74% | 72.61% / 57.91% | 71.26% / 82.69% | 0.704938 | 0.784579 | 1.159064 | 0.240361 |
+| Schedule seed 43 / 43 | 5 / 13 | 3237 / 4660 | 69.46% | 67.41% / 59.85% | 70.79% / 77.08% | 0.686041 | 0.765954 | 0.748905 | 0.224151 |
+| Schedule seed 44 / 44 | 9 / 17 | 3330 / 4660 | 71.46% | 67.27% / 69.03% | 74.94% / 73.38% | 0.711454 | 0.794759 | 1.366919 | 0.245013 |
+| G0 / 42 | 16 / 24 | 3231 / 4660 | 69.33% | 65.89% / 63.50% | 71.89% / 73.96% | 0.687912 | 0.746815 | 0.708483 | 0.226408 |
+| G1 / 42 | 7 / 15 | 2600 / 4660 | 55.79% | 0.00% / 0.00% | 55.79% / 100.00% | 0.358127 | 0.571028 | 0.684136 | 0.245525 |
+| G2 / 42 | 20 / 28 | 3076 / 4660 | 66.01% | 59.02% / 75.58% | 75.12% / 58.42% | 0.660063 | 0.697176 | 1.618217 | 0.327343 |
+| G3 / 42 | 14 / 22 | 2771 / 4660 | 59.46% | 52.41% / 90.24% | 81.94% / 35.08% | 0.577173 | 0.642805 | 1.079570 | 0.339880 |
+
+
+All sixteen rows use identical approved validation membership. G1/G2 raw head scores are scan-supervised slice diagnostics; G3 projections are not its native attention-bag prediction. Pooled probabilities were not replicated across slices. Lower raw slice NLL/Brier for smoothing or some schedule variants does not satisfy the substantial classification gain screen.
+
+Per-epoch validation slice accuracy is absent from V1/CNN and A1/V2/stability/schedule histories; train_slice_accuracy and validation loss are not substitutes. Logged maxima: S1 epoch 14 3275/4660; S2 epoch 13 3348/4660; G0 epoch 14 3273/4660; G1 epoch 14 2633/4660; G2 epoch 20 3076/4660; G3 epoch 16 2825/4660. Only G2's maximum is selected/fully cached; G1 epoch 14 survives in its previous state but lacks the full slice metric set. The other four maximum-epoch weights are not retained in those runs. Every logged maximum is below A1 anyway. Final/current/previous states without metrics are not newly scored or mislabelled as best-slice checkpoints.
+
+Full provenance, original selection rules, retained epoch inventory, complete aggregate class/probability metrics and limitations are in [SLICE_ALIGNMENT_REVIEW.md](SLICE_ALIGNMENT_REVIEW.md), [CSV](slice_alignment_metrics.csv) and [JSON](slice_alignment_metrics.json). Original patient screens remain historical results; this retrospective review does not replace them with a prospective slice experiment.
+
+![Historically selected validation slice accuracies and retrospective logged maxima](figures/slice_validation_alignment.png)
+
 ![A1 training and validation slice loss](figures/a1_training_loss.png)
 
 ![A1 patient validation trajectory](figures/a1_validation_trajectory.png)
 
 These are the unchanged curves saved during A1 development. Their original “final test not evaluated” title describes the state when they were generated; the later disclosed test exposure is reported in Section 7.
 
-## 6. Confidence, calibration and referral
+## 6. Confidence, calibration and referral — secondary patient analyses
 
 Temperature scaling [3] was fitted to aggregated patient log odds using validation data. Its scalar temperature preserves the class decision at 0.5 while changing confidence. The fitted temperatures are approximately 1.61343 for the CNN and 1.85536 for A1. Five-fold cross-fitting was used as a development diagnostic: it held each fold out of calibration/rule fitting, but did not undo earlier checkpoint selection on the complete validation cohort.
 
@@ -124,7 +173,7 @@ The reference rule accepts a prediction only at sufficient calibrated confidence
 
 Two additional policies were declared before their comparison: `strict_cn` adds calibrated P(AD)<=0.05 to any automatic CN proposal, and `no_auto_cn` sends every CN proposal to review. AD flags are unchanged. All three are reported; there is no test-based selection of a winning policy. An AD flag is not a confirmed diagnosis, and a referral is not a correct diagnosis.
 
-### Development confidence evidence
+### Development confidence evidence — patient unit
 
 | Model | Raw NLL | Cross-fit NLL | Raw Brier | Cross-fit Brier | Raw errors at confidence >=0.90 | Full-fit cutoff | Cross-fit accepted / errors |
 |---|---:|---:|---:|---:|---:|---:|---:|
@@ -136,18 +185,28 @@ A1's full-validation fitted rule accepts 48/102 with 4/48 errors, but its cross-
 The strict-CN and no-auto-CN policies are reported with their correct denominators. Automatically clearing no CN predictions removes automated negative errors by construction; it is not 100% diagnostic sensitivity or proof of safety. Specialist review outcomes and real operational workload have not been measured.
 
 
-## 7. Disclosed revised evaluation
+## 7. Disclosed revised evaluation — primary slice assessment result
 
 The original ConvNeXt achieved 72.55% on the Version 1 patient test. A1's later evaluation reused that patient-independent cohort after development using training/validation evidence. The checkpoint, preprocessing, temperatures and all policies were recorded before revised inference. This process limits additional test-based selection but cannot erase prior exposure or adaptive-development bias.
 
-### All-patient classification (primary)
+### Individual 2D test slices (primary)
 
-| Model | Correct / N | Accuracy | Macro-F1 | AUROC | AD recall | CN recall |
+| Model | Test slices correct / N | Test slice accuracy | AD precision / recall | CN precision / recall | Slice macro-F1 | Slice AUROC | Raw slice NLL | Raw slice Brier | TN / FP / FN / TP |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| A1 (epoch 13) | 3157/4640 | 68.04% | 78.72% / 54.43% | 61.86% / 83.39% | 0.676945 | 0.779813 | 1.928413 | not recorded | 1818 / 362 / 1121 / 1339 |
+| Regularized CNN (epoch 14) | 3193/4640 | 68.81% | 76.81% / 58.98% | 63.32% / 79.91% | 0.686915 | 0.776140 | 2.019384 | not recorded | 1742 / 438 / 1009 / 1451 |
+
+
+True rows/predicted columns are CN then AD. A1 matrix is `[[1818,362],[1121,1339]]`; CNN matrix is `[[1742,438],[1009,1451]]`. The slice results and AUROC/NLL come from the existing revised aggregate summary; integer arithmetic confirms counts and per-class metrics. Raw test-slice Brier was not recorded there and was not reconstructed from private test predictions. A1 has 1,121 AD slice false negatives versus CNN 1,009, and 362 CN slice false positives versus CNN 438. A1's net 36 fewer correct slices coexists with slightly higher AUROC and lower NLL; none attains 80% slice-test accuracy. No candidate choice uses these test comparisons.
+
+### All-patient classification (secondary)
+
+| Model | Test patients correct / N | Test patient accuracy | Patient macro-F1 | Patient AUROC | Patient AD recall | Patient CN recall |
 |---|---:|---:|---:|---:|---:|---:|
 | Regularized CNN (epoch 14) | 79/102 | 77.45% | 0.7258 | 0.8177 | 54.55% | 88.41% |
 | ConvNeXt A1 (seed 42, epoch 13) | 76/102 | 74.51% | 0.7040 | 0.8142 | 57.58% | 82.61% |
 
-### Per-class precision and confusion counts
+### Test-patient per-class precision and confusion counts
 
 | Model | CN precision | AD precision | TN | FP | FN | TP |
 |---|---:|---:|---:|---:|---:|---:|
@@ -156,10 +215,10 @@ The original ConvNeXt achieved 72.55% on the Version 1 patient test. A1's later 
 
 ### Other units and target reporting
 
-| Model | Patient accuracy | Scan accuracy | Slice accuracy |
+| Model | Test patients correct / N (accuracy) | Test scans correct / N (accuracy) | Test slices correct / N (assessment accuracy) |
 |---|---:|---:|---:|
-| cnn | 77.45% | 72.41% | 68.81% |
-| a1 | 74.51% | 68.10% | 68.04% |
+| cnn | 79/102 (77.45%) | 168/232 (72.41%) | 3193/4640 (68.81%) |
+| a1 | 76/102 (74.51%) | 158/232 (68.10%) | 3157/4640 (68.04%) |
 
 
 
@@ -167,9 +226,9 @@ cnn: descriptive Wilson 95% patient-accuracy interval 68.43%–84.48%.
 
 a1: descriptive Wilson 95% patient-accuracy interval 65.27%–81.97%.
 
-**Observed A1 accuracy >=0.80:** patient=False, scan=False, slice=False. The primary unit was declared as patient. The brief does not explicitly settle the threshold unit. These observed flags do not guarantee marks, a fresh independent estimate or clinical suitability.
+**Assessment target not met:** A1 test-slice accuracy is 68.04% against 80%, a shortfall of 555 correct slices. Patient-first was the historical project selection/evaluation choice; the supplied Ed clarification resolves assessment reporting to slices. The patient and scan results remain secondary and do not imply course-target attainment. Marks and any penalty/hurdle interpretation require teaching-team clarification; no waiver or deduction is assumed.
 
-### All fixed policies: safety and workload
+### All fixed patient policies: safety and workload
 
 | Model | Policy | Auto CN | AD flagged | Refer | AD incorrectly auto CN / all AD | Accepted error | Clinical reviews* |
 |---|---|---:|---:|---:|---:|---:|---:|
@@ -182,14 +241,14 @@ a1: descriptive Wilson 95% patient-accuracy interval 65.27%–81.97%.
 
 *Clinical reviews assume all AD flags also need confirmation; this workload is calculated, not observed. Referrals are not successful diagnoses. No-auto-CN removes automated negatives by construction. Accepted-subset accuracy does not replace all-patient accuracy. The 0.05 strict-CN cap is a fixed research choice, not a clinical safety bound. Descriptive policy confidence intervals and denominators are in the JSON.
 
-### Probability quality
+### Patient probability quality
 
 | Model | Raw NLL | Fixed-T NLL | Raw Brier | Fixed-T Brier |
 |---|---:|---:|---:|---:|
 | cnn | 0.5138 | 0.4839 | 0.1655 | 0.1607 |
 | a1 | 0.6040 | 0.4979 | 0.1780 | 0.1661 |
 
-Paired A1 minus CNN accuracy: -2.94%; exploratory patient-bootstrap interval -10.78% to 4.90%. This interval excludes training-seed/site uncertainty and the effects of previous test exposure.
+Paired A1 minus CNN test-patient accuracy: -2.94 percentage points; exploratory patient-bootstrap interval -10.78% to 4.90%. This interval excludes training-seed/site uncertainty and the effects of previous test exposure.
 
 ![Revised patient ROC](figures/a1_revised_test_roc.png)
 
@@ -226,6 +285,8 @@ For documentation verification, Codex matched the revised selection records to t
 | F05 | 93, 98, 102 | 0.002, 0.000, 0.176 |
 
 This resolves record/display correspondence; it is not an independent reconstruction of panel pixels from raw MRI data or a clinical interpretation. No raw test images were reopened and no test inference was run for this check. Current panel hashes and detailed correspondence evidence are retained privately. The author explicitly confirmed review of the revised cases during submission preparation; this is an author-reported review, distinct from Codex's record/display check. Public redistribution permission for the medical panels is not established, so no panels, source paths or participant identifiers are included in the repository. These cases inform documentation of the frozen result, not model or policy changes.
+
+These are five patient-level autopsies, not five independently sampled image-error evaluations. In the already reviewed displayed outputs, F01/F05 slices are CN predictions against AD labels; F02/F03 slices are AD predictions against CN labels. F04 has one AD and two CN displayed predictions against a CN label: its patient false positive does not make all displayed slices wrong. This is a documentation clarification of the retained reviewed records, not newly opened test-case analysis.
 
 The panels show three representative inputs with rounded slice-level AD scores. Patient probabilities in the tables are aggregates of all recorded slices and scans and need not equal the mean of the three displayed scores. The images are not saliency maps, clinical diagnoses or causal explanations. Values shown as 0.000 or 1.000 are rounded displays, not demonstrations of certainty.
 
@@ -315,11 +376,11 @@ Calibration changes the reported probabilities but does not change these class d
 
 ## 10. Engineering recommendation and limitations
 
-Under the tested conditions, A1 did not justify its additional model complexity for the primary accuracy and macro-F1 objectives, and the required 0.80 test accuracy was not attained. It detected one more AD patient than the CNN but produced four more false positives. This small paired comparison does not establish that the CNN architecture is universally superior.
+Under the tested conditions, A1 did not justify its additional model complexity for primary **test-slice** accuracy and macro-F1: 68.04% / 0.676945 versus CNN 68.81% / 0.686915, with the 0.80 slice-test target unmet. Its 72.19% selected slice-validation accuracy must not be confused with 83.33% validation-patient accuracy. The retrospective checkpoint inventory supports retaining A1 and closing model development under the remaining time budget, not speculative retraining or another experiment. It detected one more AD patient than the CNN but produced four more false positives. This small paired comparison does not establish that the CNN architecture is universally superior.
 
 Fixed calibration improved A1's probability quality in the revised cohort without changing classifications. Stricter CN acceptance redirected four AD false negatives to review while also referring twenty additional CN patients; one AD patient still received automatic CN. The evidence does not support using this research prototype for autonomous diagnosis or negative clearance; its outputs should remain subject to clinical review. Referring everyone removes automatic negative decisions by definition, but provides no workload reduction when AD flags also require confirmation.
 
-Limitations include limited independent patient counts, correlated slices and scans, slice-level supervision versus patient-level evaluation, repeatedly reused validation evidence, prior test exposure, seed sensitivity, JPEG rather than original physical MRI intensities, uncertainty about causal error triggers, and no prospective or cross-site clinical validation. Intervals do not account for every source of selection or training uncertainty. The later schedule-only experiment used training/validation evidence and did not meet its declared screen. This report does not select another model or policy from the exposed test outcomes.
+Limitations include limited independent patient counts, correlated slices and scans, historically patient-first selection despite slice-level assessment, repeatedly reused validation evidence, prior test exposure, seed sensitivity, JPEG rather than original physical MRI intensities, uncertainty about causal error triggers, and no prospective or cross-site clinical validation. Intervals do not account for every source of selection or training uncertainty. The schedule-only, G012 and G3 studies used training/validation evidence and did not meet their originally declared patient-based screens. Raw slice probability-quality diagnostics are available, but the patient-fitted temperatures and referral thresholds have not been validated for the primary slice unit. They must not be reused as calibrated slice rules. No independent-slice interval or significance claim is justified by the correlated image count. This report does not select another model or policy from the exposed test outcomes.
 
 ## 11. Reproduction and tested interfaces
 
@@ -392,13 +453,13 @@ Ordinary inference requires no old baseline/comparison/test report tree. It chec
 
 For frozen calibration/reference routing, add explicit `--rules <a1_operating_rules.json> --rules-sha256 <trusted-file-hash>`. For all already frozen policies, also add `--policy-rules <negative_policy_rules.json> --policy-rules-sha256 <trusted-file-hash>`. These files must bind to the exact checkpoint, epoch, manifests/configuration and fixed definitions. They are applied, never fitted. The clean verification exercised both optional inputs and reproduced the recorded apparent full-validation policy counts (auto-CN / AD flag / refer): reference 41/7/54; strict-CN 21/7/74; no-auto-CN 0/7/95. This does not turn in-sample policy results into independent validation.
 
-The retained checkpoint's clean-interface replay matched **all 4,660 slice, 233 scan and 102 patient probabilities exactly**, below the existing 2e-5 tolerance, with unchanged class decisions. A1's 83.33% validation accuracy was reproduced as a loading/interface check. No new test inference, threshold fitting, calibration refitting or model selection occurred.
+The retained checkpoint's clean-interface replay matched **all 4,660 slice, 233 scan and 102 patient probabilities exactly**, below the existing 2e-5 tolerance, with unchanged class decisions. A1's 85/102 (83.33%) validation-patient accuracy and saved 3,364/4,660 (72.19%) slice outputs were reproduced as a loading/interface check. No new test inference, threshold fitting, calibration refitting or model selection occurred.
 
 ### Source preservation and remaining submission actions
 
 Before interface edits, all 70 original assignment files and README were copied privately with SHA-256 hashes and Git revision `b67bb1327c744fdd9a30fea439efc4a5005fca27`. The original checkout and pointers remain intact. `historical_runtime/` preserves exact checkpoint-relevant source bytes; `HISTORICAL_REPLAY.md` documents inspection and validation replay. No historical checkpoint's expected hashes or checks were rewritten.
 
-The author explicitly confirmed the listed code reviews, earlier local executions and revised-case review during this task. Consultation/check-off status, exact dates/feedback, image-publication permission, PR submission, Turnitin PDF submission and later code-review response are not invented. Review and place the local commits on the appropriate submission branch, inspect the PR draft, then perform the authorized push/PR and Turnitin actions yourself. No push, PR creation or submission was performed by this packaging task. The measured 0.80 accuracy requirement remains unmet.
+The author explicitly confirmed the listed code reviews, earlier local executions and revised-case review during the earlier submission-readiness task. Consultation/check-off status, exact dates/feedback, image-publication permission, PR submission, Turnitin PDF submission and later code-review response are not invented. Review and place the local commits on the appropriate submission branch, inspect the PR draft, then perform the authorized push/PR and Turnitin actions yourself. No push, PR creation or submission was performed by this packaging task. The measured 0.80 **test-slice** accuracy requirement remains unmet. See [LOCAL_CLOSEOUT.md](LOCAL_CLOSEOUT.md) for verified branch inclusion, the unsent Ed question and exact remaining submission actions.
 
 
 ## Artificial Intelligence Usage Disclosure
@@ -406,6 +467,8 @@ The author explicitly confirmed the listed code reviews, earlier local execution
 ChatGPT assisted the earlier project with assessment interpretation, experiment planning, data/model interfaces, Python implementations and synthetic tests, PowerShell instructions, debugging, confidence/policy analysis and report/failure-case drafting. Scientific methods are separately attributed in the references. The work is not presented as wholly unaided authorship.
 
 Codex subsequently performed the scoped source/evidence audit, implemented and executed the predeclared negative schedule-only experiment, and implemented this submission packaging: explicit-input preparation/training/prediction routes, source preservation, exact-byte provenance correction, focused tests, bounded training-only smoke checks, validation-only replay, case-record/panel correspondence verification, README consolidation and PR-description drafting. Codex's checks ran through the existing pinned environment on the author's Windows host. No separate dependency environment was created, no full retraining occurred during packaging, no test inference or calibration/threshold fitting was repeated, and no push/PR/submission occurred.
+
+Codex additionally implemented the fixed G012/G3 studies and synthetic checks; the author ran their real-data commands. Codex analysed their saved validation evidence, diagnosed/repaired the aggregate-export adapter and, in this closeout, performed CPU-only saved-score/retained-checkpoint inspection and corrected assessment reporting to individual slices using the user-supplied Ed clarification. It updated this README, aggregate tables/figure, PR draft and local submission checklist. No real-data model execution, new replay, calibration, threshold fitting or test evaluation occurred during this alignment task. Historical patient-based selection was not rewritten.
 
 The author explicitly confirmed review of labels/grouping, preprocessing, model/loss/accumulation and confidence logic; execution of the earlier local checks; and review of the revised F01–F05 cases. The retained author account also describes reporting the PyTorch 2.7.1 scalar-shape loading issue. These are author-reported contributions, distinguished from the checks directly executed by Codex; they are not independent certification of personal actions.
 
@@ -418,6 +481,9 @@ The submitting author remains responsible for reviewing and understanding the co
 2. Liu et al., *A ConvNet for the 2020s*, CVPR 2022. https://arxiv.org/abs/2201.03545 . ConvNeXt architectural reference; no pretrained weights used.
 3. Guo et al., *On Calibration of Modern Neural Networks*, ICML 2017. https://arxiv.org/abs/1706.04599 . Temperature-scaling method reference.
 4. PyTorch, [previous versions](https://pytorch.org/get-started/previous-versions/#v271), exact 2.7.1 / torchvision 0.22.1 CUDA 12.6 installation combination. This packaging task did not perform that installation.
+
+5. Ilse, Tomczak and Welling, *Attention-based Deep Multiple Instance Learning*, ICML 2018. https://arxiv.org/abs/1802.04712 . Gated-attention method used in the fixed negative G3 study.
+6. User-supplied Ed clarification, supplied for this closeout: assessment accuracy is per 2D test image/slice; author/date/permalink not supplied.
 
 The result tables are taken from retained project experiment summaries and histories; submission checks reproduce the recorded validation outputs. No external benchmark has been substituted for the project's measurements. See the private evidence snapshot and the publicly appropriate plan/hash records for provenance.
 
