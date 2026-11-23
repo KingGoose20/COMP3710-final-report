@@ -286,7 +286,7 @@ class CommandAndExportTests(unittest.TestCase):
     def test_preflight_git_scope_uses_repository_root(self):
         # Read-only source check; no training/data calls or Git mutations.
         repository=st.BASE.parents[1]
-        name='recognition/ConvNeXt_Alzheimers/modules.py'
+        name=(st.BASE/'modules.py').relative_to(repository).as_posix()
         process=subprocess.run(['git','-C',str(repository),'ls-files','--error-unmatch','--',name],capture_output=True,text=True)
         self.assertEqual(process.returncode,0,process.stderr)
         self.assertEqual(process.stdout.strip(),name)

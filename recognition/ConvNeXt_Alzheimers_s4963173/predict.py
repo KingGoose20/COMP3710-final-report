@@ -5,7 +5,7 @@ evaluate: explicitly open the frozen test, load trusted weights, infer, report,
           and generate PRIVATE representative examples; resumes the same plan.
 recover-lock: after a reboot, archive a stale lock without deleting predictions.
 
-Use this installed file in recognition/ConvNeXt_Alzheimers. See
+Use this installed file in recognition/ConvNeXt_Alzheimers_s4963173. See
 FINAL_EVALUATION_METHOD.md for protocol, limitations, privacy and AI disclosure.
 """
 from __future__ import annotations

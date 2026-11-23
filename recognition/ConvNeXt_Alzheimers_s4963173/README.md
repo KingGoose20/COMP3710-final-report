@@ -230,7 +230,7 @@ For reproducibility, I used Codex-assisted clean-code verification. The recorded
 I included `dataset.py prepare` and `preparation_helpers/` so the saved split can be rebuilt from explicit data and metadata. The command checks patient assignments and hashes against `APPROVED_PARTITIONS.json` and refuses to overwrite existing outputs. It is **not** a new pixel audit or a new approval of the split. The commands below show the documented workflow with **my private local paths**. Anyone reproducing it should adjust the paths and choose a new, authorized output location.
 
 ```powershell
-Set-Location '<checkout>/recognition/ConvNeXt_Alzheimers'
+Set-Location '<checkout>/recognition/ConvNeXt_Alzheimers_s4963173'
 $py = 'C:/Users/Angus/COMP3710-private/.venv/Scripts/python.exe'
 $data = 'C:/Users/Angus/COMP3710-private/data/ADNI'
 $out = 'C:/Users/Angus/COMP3710-private/submission-readiness/clean-verification-v2'
@@ -247,7 +247,7 @@ I used the bounded smoke test to check the basic training path without running a
 # For recovery, use the same paths and add --resume.
 ```
 
-The full route keeps my original V2 training recipe and **patient-based checkpoint-selection rule**. A different run might select another epoch or produce different scores; the earlier epoch-13 result is not guaranteed. The selected checkpoint is written to `<NEW_PRIVATE_A1_RUN>/run/PRIVATE_best_model.pt`. I kept the older commands and exact source requirements in [HISTORICAL_REPLAY.md](HISTORICAL_REPLAY.md).
+The full route keeps my original V2 training recipe and **patient-based checkpoint-selection rule**. A different run might select another epoch or produce different scores; the earlier epoch-13 result is not guaranteed. The selected checkpoint is written to `<NEW_PRIVATE_A1_RUN>/run/PRIVATE_best_model.pt`. I kept the older commands and exact source requirements in [HISTORICAL_REPLAY.md](HISTORICAL_REPLAY.md). Use the original assignment path at commit `153ada537b3b1a9ea12fb690525b8d3ceae1469e` for the frozen G012 and G3 commands.
 
 ### Independent predictions
 
